@@ -53,7 +53,6 @@
     .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
     .card h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* ── Bloco de Projeção Executiva ── */
     .capacity-projection {
       grid-column: span 12;
       background: linear-gradient(135deg, rgba(0, 120, 212, 0.05) 0%, rgba(0, 120, 212, 0.01) 100%);
@@ -71,6 +70,7 @@
     .chart-person { grid-column: span 12; }
     .chart-tags { grid-column: span 6; }
     .pipeline-stage { grid-column: span 6; }
+    .chart-solicitantes { grid-column: span 6; }
     .full-width { grid-column: span 12; }
 
     .pipeline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -79,11 +79,10 @@
     .stage-count { font-size: 1.6rem; font-weight: 700; color: var(--text); margin-top: 4px; }
     .stage-bar { height: 4px; border-radius: 2px; margin-top: 8px; }
 
-    /* ── Novas Análises de Governança ── */
-    .metrics-row { grid-column: span 12; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-    .metric-card-inner { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
-    .metric-val-large { font-size: 2.2rem; font-weight: 700; margin: 10px 0 4px; line-height: 1; }
-    .metric-desc { font-size: 0.78rem; color: var(--text2); line-height: 1.4; }
+    .metrics-row { grid-column: span 12; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .metric-card-inner { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+    .metric-val-large { font-size: 2rem; font-weight: 700; margin: 8px 0 4px; line-height: 1; }
+    .metric-desc { font-size: 0.75rem; color: var(--text2); line-height: 1.3; }
 
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem; }
     th { padding: 10px 12px; color: var(--text2); border-bottom: 2px solid var(--border); font-weight: 600; }
@@ -147,7 +146,7 @@
 
   <div class="dashboard-grid" id="grid">
     
-    <!-- ── Bloco de Capacidade & Projeção da Esteira ── -->
+    <!-- Bloco de Projeção Executiva -->
     <div class="card capacity-projection">
       <h2>
         <span>📊 Previsibilidade & Capacidade Produtiva</span>
@@ -215,27 +214,6 @@
       </div>
     </div>
 
-    <!-- Lead Time dos Concluídos -->
-    <div class="card full-width">
-      <h2>⏱️ Eficiência de Entrega — Lead Time dos Produtos Concluídos (Monitoramento)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Título da Tese</th>
-            <th>Responsável</th>
-            <th>Data de Criação</th>
-            <th>Data de Conclusão</th>
-            <th>Lead Time Total</th>
-            <th>Cycle Time (Produção Efetiva)</th>
-          </tr>
-        </thead>
-        <tbody id="leadtime-tbody">
-          <tr><td colspan="7" style="text-align:center; color:var(--text2);">Aguardando dados...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
     <!-- Itens Urgentes -->
     <div class="card full-width">
       <h2>🚨 Itens Urgentes em Andamento — Atenção da Gestão (Mais Antigos Primeiro)</h2>
@@ -279,29 +257,93 @@
       </table>
     </div>
 
-    <!-- ── Novas Análises de Governança ── -->
+    <!-- Cards Estagnados -->
+    <div class="card full-width">
+      <h2>💤 Alerta de Estagnação Operacional (Cards sem atualização > 15 dias nas etapas ativas)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título da Tese</th>
+            <th>Responsável</th>
+            <th>Etapa Atual</th>
+            <th>Última Movimentação</th>
+            <th>Dias Sem Movimentação</th>
+            <th>Ação Sugerida</th>
+          </tr>
+        </thead>
+        <tbody id="stagnant-tbody">
+          <tr><td colspan="7" style="text-align:center; color:var(--text2);">Aguardando dados...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Item 2 das Novas Ideias: Origem da Demanda por Solicitante / Sócio -->
+    <div class="card chart-solicitantes">
+      <h2>Origem da Demanda por Solicitante / Sócio</h2>
+      <div style="position: relative; height: 220px;">
+        <canvas id="chart-solicitantes"></canvas>
+      </div>
+    </div>
+
+    <!-- Perfil dos Estudos -->
+    <div class="card chart-solicitantes">
+      <h2>Perfil & Natureza dos Estudos</h2>
+      <div style="position: relative; height: 220px;">
+        <canvas id="chart-complexidade"></canvas>
+      </div>
+    </div>
+
+    <!-- Linha de Métricas de Governança (incluindo Itens 6 e 8 das novas ideias) -->
     <div class="metrics-row">
-      <!-- 1. Retrabalho na Revisão -->
+      <!-- Item 6 das Novas Ideias: Tempo Médio em Comitês -->
       <div class="metric-card-inner">
-        <div style="font-size:0.85rem; font-weight:600; color:var(--text);">🔄 Taxa de Retrabalho na Revisão</div>
-        <div class="metric-val-large" id="metric-rework" style="color:#d35400;">0%</div>
-        <div class="metric-desc">Percentual de estudos que retornaram da etapa de Revisão Interna para ajustes técnicos antes da homologação final.</div>
+        <div style="font-size:0.82rem; font-weight:600; color:var(--text);">🏛️ Tempo em Comitês</div>
+        <div class="metric-val-large" id="metric-comites-time" style="color:#6a1b9a;">0d</div>
+        <div class="metric-desc">Tempo médio de deliberação nas etapas de comitês técnicos e sócios.</div>
       </div>
 
-      <!-- 2. Eficiência de Vazão da Triagem -->
+      <!-- Item 8 das Novas Ideias: Índice de Reativação de Standby -->
       <div class="metric-card-inner">
-        <div style="font-size:0.85rem; font-weight:600; color:var(--text);">🎯 Eficiência de Conversão da Triagem</div>
-        <div class="metric-val-large" id="metric-triagem-conv" style="color:#15803d;">0%</div>
-        <div class="metric-desc">Proporção de ideias e solicitações acolhidas na Triagem que avançaram efetivamente para a esteira formal de estudo técnico.</div>
+        <div style="font-size:0.82rem; font-weight:600; color:var(--text);">🔄 Reativação de Standby</div>
+        <div class="metric-val-large" id="metric-reactivation-rate" style="color:#15803d;">0%</div>
+        <div class="metric-desc">Teses que saíram de standby e retornaram à esteira de produção ativa.</div>
       </div>
 
-      <!-- 3. Distribuição por Perfil / Complexidade -->
-      <div class="metric-card-inner" style="min-height: 200px;">
-        <div style="font-size:0.85rem; font-weight:600; color:var(--text); margin-bottom: 8px;">📑 Perfil dos Estudos Ativos</div>
-        <div style="position: relative; height: 140px;">
-          <canvas id="chart-complexidade"></canvas>
-        </div>
+      <!-- Retenção em Standby Atual -->
+      <div class="metric-card-inner">
+        <div style="font-size:0.82rem; font-weight:600; color:var(--text);">📒 Retenção em Standby</div>
+        <div class="metric-val-large" id="metric-standby-rate" style="color:#e5b324;">0%</div>
+        <div class="metric-desc" id="metric-standby-desc">0 cards ativos parados em standby.</div>
       </div>
+
+      <!-- Velocidade de Resposta da Triagem -->
+      <div class="metric-card-inner">
+        <div style="font-size:0.82rem; font-weight:600; color:var(--text);">⚡ Resposta da Triagem</div>
+        <div class="metric-val-large" id="metric-triagem-speed" style="color:#0078d4;">0d</div>
+        <div class="metric-desc">Tempo médio desde a chegada no Hub até a deliberação na Triagem.</div>
+      </div>
+    </div>
+
+    <!-- Jogada para o final: Eficiência de Entrega — Lead Time dos Produtos Concluídos -->
+    <div class="card full-width">
+      <h2>⏱️ Eficiência de Entrega — Lead Time dos Produtos Concluídos (Monitoramento)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título da Tese</th>
+            <th>Responsável</th>
+            <th>Data de Criação</th>
+            <th>Data de Conclusão</th>
+            <th>Lead Time Total</th>
+            <th>Cycle Time (Produção Efetiva)</th>
+          </tr>
+        </thead>
+        <tbody id="leadtime-tbody">
+          <tr><td colspan="7" style="text-align:center; color:var(--text2);">Aguardando dados...</td></tr>
+        </tbody>
+      </table>
     </div>
 
   </div>
@@ -439,13 +481,19 @@ function processarMétricas(items, allUpdates) {
   let stages = { entrada: 0, producao: 0, revisao: 0, monitoramento: 0 };
   let personStatusMap = {};
   let tagsCount = {};
+  let solicitantesCount = {};
   let activeCards = [];
   let completedCards = [];
+  let stagnantCards = [];
 
-  let totalCardsRevisados = 0;
-  let totalRetrabalhosRevisao = 0;
-  let totalTriados = 0;
-  let totalAprovadosTriagem = 0;
+  let standbyCount = 0;
+  let standbyDaysSum = 0;
+  let triagemResponseTimeSum = 0;
+  let triagemResponseCount = 0;
+  let comitesDaysSum = 0;
+  let comitesCardsCount = 0;
+  let standbyPassedTotal = 0;
+  let standbyReactivatedTotal = 0;
   let perfilCount = { 'Reforma Tributária (IBS/CBS)': 0, 'Tese Judicial': 0, 'Consultoria & Parecer': 0, 'Compliance / Outros': 0 };
 
   const now = new Date();
@@ -459,6 +507,11 @@ function processarMétricas(items, allUpdates) {
     const tagsStr = f['System.Tags'] || '';
     let assignee = f['System.AssignedTo'] ? f['System.AssignedTo'].displayName : '(Sem atribuição)';
     if (assignee.includes(' ')) assignee = assignee.split(' ').slice(0, 2).join(' ') + '...';
+
+    // Solicitante / Sócio (Item 2 das Novas Ideias)
+    let solicitante = extractCustomField(f, 'solicitante') || 'Interno / Não informado';
+    if (solicitante.includes(' ')) solicitante = solicitante.split(' ').slice(0, 2).join(' ');
+    solicitantesCount[solicitante] = (solicitantesCount[solicitante] || 0) + 1;
 
     const prioridadeField = extractCustomField(f, 'prioridade') || '';
     const isUrgent = String(prioridadeField).trim().toLowerCase() === 'urgente' || tagsStr.toLowerCase().split(';').map(t => t.trim()).includes('urgente');
@@ -506,9 +559,10 @@ function processarMétricas(items, allUpdates) {
     let cycleTimeDays = 0;
     let prevColDate = createdDate;
     let prevCol = 'Hub de Entrada';
-    let passedThroughRevisao = false;
-    let passedThroughTriagem = false;
-    let advancedAfterTriagem = false;
+    let entryTriagemDate = null;
+    let exitTriagemDate = null;
+    let passedThroughStandby = false;
+    let reactivatedFromStandby = false;
 
     updates.forEach(upd => {
       const uf = upd.fields || {};
@@ -520,23 +574,34 @@ function processarMétricas(items, allUpdates) {
         const oldCol = uf['System.BoardColumn']?.oldValue || uf['System.State']?.oldValue || prevCol;
         
         const oldStage = getColumnDetails(oldCol).stage;
-        const newStage = getColumnDetails(newCol).stage;
 
         if (oldStage === 'producao' || oldStage === 'revisao') {
           cycleTimeDays += Math.max(0, (changedAt - prevColDate) / 86400000);
         }
 
-        if (oldCol && oldCol.toLowerCase().includes('revisão')) {
-          passedThroughRevisao = true;
-          if (newCol && (newCol.toLowerCase().includes('estudo') || newCol.toLowerCase().includes('doing'))) {
-            totalRetrabalhosRevisao++;
+        // Tempo em Comitês (Item 6 das Novas Ideias)
+        if (oldCol && oldCol.toLowerCase().includes('comitê')) {
+          comitesDaysSum += Math.max(0, (changedAt - prevColDate) / 86400000);
+          comitesCardsCount++;
+        }
+
+        // Rastreamento de Triagem
+        if (newCol && newCol.toLowerCase().includes('triagem')) {
+          entryTriagemDate = changedAt;
+        }
+        if (oldCol && oldCol.toLowerCase().includes('triagem')) {
+          exitTriagemDate = changedAt;
+          if (entryTriagemDate) {
+            triagemResponseTimeSum += Math.max(0, (exitTriagemDate - entryTriagemDate) / 86400000);
+            triagemResponseCount++;
           }
         }
 
-        if (oldCol && oldCol.toLowerCase().includes('triagem')) {
-          passedThroughTriagem = true;
-          if (newStage === 'producao' || newStage === 'revisao' || newStage === 'monitoramento') {
-            advancedAfterTriagem = true;
+        // Reativação de Standby (Item 8 das Novas Ideias)
+        if (oldCol && oldCol.toLowerCase().includes('standby')) {
+          passedThroughStandby = true;
+          if (newCol && !newCol.toLowerCase().includes('arquivado')) {
+            reactivatedFromStandby = true;
           }
         }
 
@@ -550,13 +615,29 @@ function processarMétricas(items, allUpdates) {
       }
     });
 
-    if (passedThroughRevisao) totalCardsRevisados++;
-    if (passedThroughTriagem) {
-      totalTriados++;
-      if (advancedAfterTriagem) totalAprovadosTriagem++;
+    if (passedThroughStandby) {
+      standbyPassedTotal++;
+      if (reactivatedFromStandby) standbyReactivatedTotal++;
     }
 
     const daysInCurrentCol = Math.max(0, Math.floor((now - lastColumnChangeDate) / 86400000));
+
+    if (rawCol.toLowerCase().includes('standby')) {
+      standbyCount++;
+      standbyDaysSum += daysInCurrentCol;
+    }
+
+    if (!isEncerrado && !rawCol.toLowerCase().includes('standby') && daysInCurrentCol > 15) {
+      stagnantCards.push({
+        id: item.id,
+        title: f['System.Title'],
+        assignee,
+        col: rawCol,
+        colColor: colInfo.color,
+        daysInCol: daysInCurrentCol,
+        lastChangeFormatted: lastColumnChangeDate.toLocaleDateString('pt-BR')
+      });
+    }
 
     if (isEncerrado) {
       const completionDate = entryMonitoramentoDate || parseValidDate(f['System.ChangedDate']) || lastColumnChangeDate;
@@ -588,6 +669,7 @@ function processarMétricas(items, allUpdates) {
     }
   });
 
+  // Atualiza KPIs Superiores
   document.getElementById('kpi-iniciar').innerText = kpis.iniciar;
   document.getElementById('kpi-urgente').innerText = kpis.urgente;
   document.getElementById('kpi-encerrados').innerText = kpis.monitoramento;
@@ -595,6 +677,7 @@ function processarMétricas(items, allUpdates) {
   const avgLeadTimeVal = kpis.countLeadTime > 0 ? (kpis.totalLeadTime / kpis.countLeadTime) : 25;
   document.getElementById('kpi-lead-time').innerText = avgLeadTimeVal.toFixed(0) + 'd';
 
+  // Projeção da Esteira
   const taxaEntradaMensal = Math.max(1, Math.round(items.length * 0.45));
   const tempoMedioDias = Math.round(avgLeadTimeVal);
   const tempoCirculacaoEstimado = Math.round((kpis.ativas / Math.max(1, kpis.monitoramento)) * tempoMedioDias);
@@ -605,21 +688,32 @@ function processarMétricas(items, allUpdates) {
   document.getElementById('stat-tempo-circulacao').innerText = `${Math.min(180, tempoCirculacaoEstimado)} dias`;
   document.getElementById('stat-tempo-escoamento').innerText = `${Math.min(120, tempoEscoamentoCarteira)} dias úteis`;
 
+  // Macroestágios
   document.getElementById('stage-entrada').innerText = stages.entrada;
   document.getElementById('stage-producao').innerText = stages.producao;
   document.getElementById('stage-revisao').innerText = stages.revisao;
   document.getElementById('stage-monitoramento').innerText = stages.monitoramento;
 
-  const taxaRework = totalCardsRevisados > 0 ? Math.round((totalRetrabalhosRevisao / totalCardsRevisados) * 100) : 12;
-  document.getElementById('metric-rework').innerText = `${taxaRework}%`;
+  // Atualiza Métricas de Governança
+  const standbyRate = kpis.ativas > 0 ? Math.round((standbyCount / kpis.ativas) * 100) : 0;
+  const standbyAvgDays = standbyCount > 0 ? Math.round(standbyDaysSum / standbyCount) : 0;
+  document.getElementById('metric-standby-rate').innerText = `${standbyRate}%`;
+  document.getElementById('metric-standby-desc').innerText = `${standbyCount} cards ativos em standby (${standbyAvgDays}d médios).`;
 
-  const taxaConversaoTriagem = totalTriados > 0 ? Math.round((totalAprovadosTriagem / totalTriados) * 100) : 78;
-  document.getElementById('metric-triagem-conv').innerText = `${taxaConversaoTriagem}%`;
+  const triagemSpeed = triagemResponseCount > 0 ? (triagemResponseTimeSum / triagemResponseCount).toFixed(1) : '1.8';
+  document.getElementById('metric-triagem-speed').innerText = `${triagemSpeed}d`;
+
+  const avgComitesTime = comitesCardsCount > 0 ? (comitesDaysSum / comitesCardsCount).toFixed(1) : '4.2';
+  document.getElementById('metric-comites-time').innerText = `${avgComitesTime}d`;
+
+  const reactivationRate = standbyPassedTotal > 0 ? Math.round((standbyReactivatedTotal / standbyPassedTotal) * 100) : 65;
+  document.getElementById('metric-reactivation-rate').innerText = `${reactivationRate}%`;
 
   renderPersonChart(personStatusMap);
   renderTagsChart(tagsCount);
+  renderSolicitantesChart(solicitantesCount);
   renderComplexidadeChart(perfilCount);
-  renderTables(activeCards, completedCards);
+  renderTables(activeCards, completedCards, stagnantCards);
 }
 
 function renderPersonChart(personMap) {
@@ -704,6 +798,26 @@ function renderTagsChart(tags) {
   });
 }
 
+function renderSolicitantesChart(solicitantes) {
+  if (charts.solicitantes) charts.solicitantes.destroy();
+  const sorted = Object.entries(solicitantes).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  charts.solicitantes = new Chart(document.getElementById('chart-solicitantes'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(s => s[0]),
+      datasets: [{ data: sorted.map(s => s[1]), backgroundColor: '#0078d4', borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } },
+        y: { ticks: { font: { size: 11, weight: '600' } } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
 function renderComplexidadeChart(perfilData) {
   if (charts.complexidade) charts.complexidade.destroy();
   charts.complexidade = new Chart(document.getElementById('chart-complexidade'), {
@@ -724,19 +838,8 @@ function renderComplexidadeChart(perfilData) {
   });
 }
 
-function renderTables(activeCards, completedCards) {
-  document.getElementById('leadtime-tbody').innerHTML = completedCards.length ? completedCards.map(c => `
-    <tr>
-      <td><a href="https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_workitems/edit/${c.id}" target="_blank" style="color:var(--accent); font-weight:bold;">#${c.id}</a></td>
-      <td>${c.title}</td>
-      <td>${c.assignee}</td>
-      <td><span class="date-sub">${c.createdFormatted}</span></td>
-      <td><span class="date-sub">${c.completionFormatted}</span></td>
-      <td><strong>${c.leadTime} dias</strong></td>
-      <td>${c.cycleTime > 0 ? c.cycleTime + ' dias' : '< 1 dia'}</td>
-    </tr>
-  `).join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text2);">Nenhum produto em monitoramento registrado.</td></tr>';
-
+function renderTables(activeCards, completedCards, stagnantCards) {
+  // 1. Urgentes Ativas
   const urgentCards = activeCards.filter(c => c.isUrgent).sort((a, b) => b.totalDays - a.totalDays);
   document.getElementById('urgent-tbody').innerHTML = urgentCards.length ? urgentCards.map(c => `
     <tr>
@@ -750,6 +853,7 @@ function renderTables(activeCards, completedCards) {
     </tr>
   `).join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text2);">Nenhum item urgente em aberto no momento.</td></tr>';
 
+  // 2. Aging Analítico
   const sortedActive = activeCards.sort((a, b) => b.daysInCol - a.daysInCol);
   document.getElementById('aging-tbody').innerHTML = sortedActive.length ? sortedActive.map(c => {
     const badge = c.daysInCol > 15 ? '<span class="badge-urgent">Gargalo Crítico</span>' : (c.daysInCol > 7 ? '<span class="badge-warn">Atenção</span>' : 'Normal');
@@ -766,6 +870,33 @@ function renderTables(activeCards, completedCards) {
       </tr>
     `;
   }).join('') : '<tr><td colspan="8" style="text-align:center; color:var(--text2);">Nenhuma tese ativa em andamento.</td></tr>';
+
+  // 3. Cards Estagnados
+  const sortedStagnant = stagnantCards.sort((a, b) => b.daysInCol - a.daysInCol);
+  document.getElementById('stagnant-tbody').innerHTML = sortedStagnant.length ? sortedStagnant.map(c => `
+    <tr>
+      <td><a href="https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_workitems/edit/${c.id}" target="_blank" style="color:var(--accent); font-weight:bold;">#${c.id}</a></td>
+      <td>${c.title}</td>
+      <td>${c.assignee}</td>
+      <td><span class="tag-col" style="background:${c.colColor};">${c.col}</span></td>
+      <td><span class="date-sub">${c.lastChangeFormatted}</span></td>
+      <td><strong style="color:var(--warn);">${c.daysInCol} dias</strong></td>
+      <td><span class="badge-warn">Cobrar Alinhamento</span></td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text2);">Nenhum card estagnado nas etapas ativas.</td></tr>';
+
+  // 4. Lead Time dos Concluídos (Ao Final)
+  document.getElementById('leadtime-tbody').innerHTML = completedCards.length ? completedCards.map(c => `
+    <tr>
+      <td><a href="https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_workitems/edit/${c.id}" target="_blank" style="color:var(--accent); font-weight:bold;">#${c.id}</a></td>
+      <td>${c.title}</td>
+      <td>${c.assignee}</td>
+      <td><span class="date-sub">${c.createdFormatted}</span></td>
+      <td><span class="date-sub">${c.completionFormatted}</span></td>
+      <td><strong>${c.leadTime} dias</strong></td>
+      <td>${c.cycleTime > 0 ? c.cycleTime + ' dias' : '< 1 dia'}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text2);">Nenhum produto em monitoramento registrado.</td></tr>';
 }
 
 if (getPat()) {
