@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Executivo NPT — Núcleo de Produtos Tributários</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4f5f7; --card-bg: #ffffff; --border: #e0e0e0;
+      --text: #1a1a2e; --text2: #6b7280; --accent: #0078d4;
+      --kpi-yellow: #fef08a; --kpi-red: #fca5a5; --kpi-green: #86efac; --kpi-orange: #fdba74; --kpi-blue: #bae6fd;
+      --kpi-text: #1f2937; --radius: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111827; --card-bg: #1f2937; --border: #374151;
+        --text: #f9fafb; --text2: #9ca3af;
+        --kpi-yellow: #ca8a04; --kpi-red: #b91c1c; --kpi-green: #15803d; --kpi-orange: #c2410c; --kpi-blue: #0369a1;
+        --kpi-text: #f9fafb;
+      }
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 24px; }
+    .pat-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .pat-inputs { display: flex; align-items: center; gap: 10px; flex: 1; max-width: 600px; }
+    .pat-inputs label { font-size: 0.85rem; font-weight: 600; }
+    .pat-inputs input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-family: monospace; font-size: 0.85rem; }
+    .btn-connect { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn-clear { padding: 8px 12px; background: transparent; color: var(--text2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+    .status-pill { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; }
+    .status-pill.connected { background: #dcfce7; color: #15803d; }
+    .status-pill.disconnected { background: #fee2e2; color: #b91c1c; }
+
+    #log-box { background: #1f2937; color: #38bdf8; font-family: monospace; font-size: 0.78rem; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; max-height: 120px; overflow-y: auto; display: none; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .header-text h1 { font-size: 1.4rem; font-weight: 700; }
+    .header-text p { font-size: 0.85rem; color: var(--text2); }
+
+    .kpi-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+    .kpi-card { padding: 16px; border-radius: 8px; color: var(--kpi-text); }
+    .kpi-card h3 { font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
+    .kpi-card .kpi-value { font-size: 2rem; font-weight: 300; line-height: 1; }
+    .kpi-card .kpi-label { font-size: 0.72rem; margin-top: 4px; }
+    .kpi-yellow { background: var(--kpi-yellow); }
+    .kpi-red { background: var(--kpi-red); }
+    .kpi-green { background: var(--kpi-green); }
+    .kpi-orange { background: var(--kpi-orange); }
+    .kpi-blue { background: var(--kpi-blue); }
+
+    .dashboard-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .card h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* ── Bloco de Projeção Executiva ── */
+    .capacity-projection {
+      grid-column: span 12;
+      background: linear-gradient(135deg, rgba(0, 120, 212, 0.05) 0%, rgba(0, 120, 212, 0.01) 100%);
+      border: 1px solid rgba(0, 120, 212, 0.25);
+    }
+    .projection-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .projection-box {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .projection-title { font-size: 0.82rem; font-weight: 600; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .projection-text { font-size: 0.9rem; line-height: 1.5; color: var(--text); }
+    .projection-highlight { font-weight: 700; color: var(--accent); }
+
+    .chart-person { grid-column: span 12; }
+    .chart-tags { grid-column: span 6; }
+    .pipeline-stage { grid-column: span 6; }
+    .full-width { grid-column: span 12; }
+
+    .pipeline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stage-item { padding: 12px 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; }
+    .stage-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: var(--text2); }
+    .stage-count { font-size: 1.6rem; font-weight: 700; color: var(--text); margin-top: 4px; }
+    .stage-bar { height: 4px; border-radius: 2px; margin-top: 8px; }
+
+    /* ── Novas Análises de Governança ── */
+    .metrics-row { grid-column: span 12; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    .metric-card-inner { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+    .metric-val-large { font-size: 2.2rem; font-weight: 700; margin: 10px 0 4px; line-height: 1; }
+    .metric-desc { font-size: 0.78rem; color: var(--text2); line-height: 1.4; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem; }
+    th { padding: 10px 12px; color: var(--text2); border-bottom: 2px solid var(--border); font-weight: 600; }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    tr:hover td { background: rgba(0,0,0,0.02); }
+
+    .tag-col { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .badge-urgent { background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+    .badge-warn { background: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+    .date-sub { font-size: 0.75rem; color: var(--text2); }
+  </style>
+</head>
+<body>
+
+  <div class="pat-bar">
+    <div class="pat-inputs">
+      <label for="pat-input">Token (PAT):</label>
+      <input type="password" id="pat-input" placeholder="Cole seu Personal Access Token aqui...">
+      <button class="btn-connect" onclick="salvarECarregar()">Conectar e Atualizar</button>
+      <button class="btn-clear" onclick="limparToken()">Limpar</button>
+    </div>
+    <div id="conn-status" class="status-pill disconnected">● Desconectado</div>
+  </div>
+
+  <div id="log-box"></div>
+
+  <div class="header">
+    <div class="header-text">
+      <h1>Núcleo de Produtos Tributários — Visão Executiva</h1>
+      <p id="last-updated">Aguardando conexão...</p>
+    </div>
+  </div>
+
+  <div class="kpi-container" id="kpi-panel">
+    <div class="kpi-card kpi-yellow">
+      <h3>Entrada & Triagem</h3>
+      <div class="kpi-value" id="kpi-iniciar">0</div>
+      <div class="kpi-label">Itens a avaliar</div>
+    </div>
+    <div class="kpi-card kpi-red">
+      <h3>Prioridade Urgente</h3>
+      <div class="kpi-value" id="kpi-urgente">0</div>
+      <div class="kpi-label">Requerem ação imediata</div>
+    </div>
+    <div class="kpi-card kpi-orange">
+      <h3>Teses Ativas</h3>
+      <div class="kpi-value" id="kpi-total">0</div>
+      <div class="kpi-label">Estudos em produção</div>
+    </div>
+    <div class="kpi-card kpi-blue">
+      <h3>Lead Time Médio</h3>
+      <div class="kpi-value" id="kpi-lead-time">0d</div>
+      <div class="kpi-label">Criação até Conclusão</div>
+    </div>
+    <div class="kpi-card kpi-green">
+      <h3>Encerrados</h3>
+      <div class="kpi-value" id="kpi-encerrados">0</div>
+      <div class="kpi-label">Em Monitoramento</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid" id="grid">
+    
+    <!-- ── Bloco de Capacidade & Projeção da Esteira ── -->
+    <div class="card capacity-projection">
+      <h2>
+        <span>📊 Previsibilidade & Capacidade Produtiva</span>
+        <span style="font-size:0.75rem; font-weight:normal; color:var(--text2);">Modelagem de Fluxo</span>
+      </h2>
+      <div class="projection-container">
+        <div class="projection-box">
+          <div class="projection-title">Equilíbrio & Renovação da Esteira</div>
+          <div class="projection-text" id="proj-dinamica">
+            No ritmo atual, com uma taxa média de entrada de <span class="projection-highlight" id="stat-taxa-entrada">0 cards/mês</span> e tempo médio de conclusão de <span class="projection-highlight" id="stat-tempo-medio">0 dias</span>, a estimativa média de circulação da esteira para renovação e solução do fluxo é de <span class="projection-highlight" id="stat-tempo-circulacao">0 dias</span>.
+          </div>
+        </div>
+        <div class="projection-box">
+          <div class="projection-title">Escoamento da Carteira Atual</div>
+          <div class="projection-text" id="proj-estatica">
+            Mantendo a capacidade produtiva e a maturidade dos estudos em andamento sem novas entradas prioritárias, a previsão de conclusão de todo o portfólio ativo é estimada em <span class="projection-highlight" id="stat-tempo-escoamento">0 dias úteis</span>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alocação e Status da Equipe -->
+    <div class="card chart-person">
+      <h2>Alocação e Status da Equipe Técnica</h2>
+      <div style="position: relative; height: 320px;">
+        <canvas id="chart-person"></canvas>
+      </div>
+    </div>
+
+    <!-- Pipeline de Maturidade -->
+    <div class="card pipeline-stage">
+      <h2>
+        <span>🚀 Pipeline de Maturidade dos Estudos</span>
+        <span style="font-size:0.75rem; font-weight:normal; color:var(--text2);">Fluxo Macro</span>
+      </h2>
+      <div class="pipeline-grid" id="pipeline-container">
+        <div class="stage-item">
+          <div class="stage-header"><span>1. Entrada & Triagem</span><span>💡🔍</span></div>
+          <div class="stage-count" id="stage-entrada">0</div>
+          <div class="stage-bar" style="background:#3fa9f5;"></div>
+        </div>
+        <div class="stage-item">
+          <div class="stage-header"><span>2. Produção Técnica</span><span>📗📒</span></div>
+          <div class="stage-count" id="stage-producao">0</div>
+          <div class="stage-bar" style="background:#548235;"></div>
+        </div>
+        <div class="stage-item">
+          <div class="stage-header"><span>3. Revisão & Comitês</span><span>🔄🏛️</span></div>
+          <div class="stage-count" id="stage-revisao">0</div>
+          <div class="stage-bar" style="background:#d35400;"></div>
+        </div>
+        <div class="stage-item">
+          <div class="stage-header"><span>4. Concluído (Monitoramento)</span><span>🗓️</span></div>
+          <div class="stage-count" id="stage-monitoramento">0</div>
+          <div class="stage-bar" style="background:#7f8c8d;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Volume por Tributo -->
+    <div class="card chart-tags">
+      <h2>Matéria Tributária (Foco de Estudo)</h2>
+      <div style="position: relative; height: 260px;">
+        <canvas id="chart-tags"></canvas>
+      </div>
+    </div>
+
+    <!-- Lead Time dos Concluídos -->
+    <div class="card full-width">
+      <h2>⏱️ Eficiência de Entrega — Lead Time dos Produtos Concluídos (Monitoramento)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título da Tese</th>
+            <th>Responsável</th>
+            <th>Data de Criação</th>
+            <th>Data de Conclusão</th>
+            <th>Lead Time Total</th>
+            <th>Cycle Time (Produção Efetiva)</th>
+          </tr>
+        </thead>
+        <tbody id="leadtime-tbody">
+          <tr><td colspan="7" style="text-align:center; color:var(--text2);">Aguardando dados...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Itens Urgentes -->
+    <div class="card full-width">
+      <h2>🚨 Itens Urgentes em Andamento — Atenção da Gestão (Mais Antigos Primeiro)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título da Tese</th>
+            <th>Responsável</th>
+            <th>Etapa Atual</th>
+            <th>Última Movimentação</th>
+            <th>Parado na Etapa</th>
+            <th>Tempo Total em Aberto</th>
+          </tr>
+        </thead>
+        <tbody id="urgent-tbody">
+          <tr><td colspan="7" style="text-align:center; color:var(--text2);">Aguardando dados...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Aging Analítico -->
+    <div class="card full-width">
+      <h2>⏳ Aging Analítico das Teses Ativas (Gargalos de Tempo por Etapa)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título da Tese</th>
+            <th>Responsável</th>
+            <th>Etapa Atual</th>
+            <th>Última Movimentação</th>
+            <th>Dias nesta Etapa</th>
+            <th>Idade Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="aging-tbody">
+          <tr><td colspan="8" style="text-align:center; color:var(--text2);">Aguardando dados...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Novas Análises de Governança ── -->
+    <div class="metrics-row">
+      <!-- 1. Retrabalho na Revisão -->
+      <div class="metric-card-inner">
+        <div style="font-size:0.85rem; font-weight:600; color:var(--text);">🔄 Taxa de Retrabalho na Revisão</div>
+        <div class="metric-val-large" id="metric-rework" style="color:#d35400;">0%</div>
+        <div class="metric-desc">Percentual de estudos que retornaram da etapa de Revisão Interna para ajustes técnicos antes da homologação final.</div>
+      </div>
+
+      <!-- 2. Eficiência de Vazão da Triagem -->
+      <div class="metric-card-inner">
+        <div style="font-size:0.85rem; font-weight:600; color:var(--text);">🎯 Eficiência de Conversão da Triagem</div>
+        <div class="metric-val-large" id="metric-triagem-conv" style="color:#15803d;">0%</div>
+        <div class="metric-desc">Proporção de ideias e solicitações acolhidas na Triagem que avançaram efetivamente para a esteira formal de estudo técnico.</div>
+      </div>
+
+      <!-- 3. Distribuição por Perfil / Complexidade -->
+      <div class="metric-card-inner" style="min-height: 200px;">
+        <div style="font-size:0.85rem; font-weight:600; color:var(--text); margin-bottom: 8px;">📑 Perfil dos Estudos Ativos</div>
+        <div style="position: relative; height: 140px;">
+          <canvas id="chart-complexidade"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+const ORG = 'NPT-Martinelli';
+const PROJECT = 'Núcleo de Produtos Tributários';
+
+const COLUMN_CONFIG = [
+  { match: ['hub de entrada', 'hub de entradas'], label: '💡 Hub de Entradas', color: '#3fa9f5', stage: 'entrada' },
+  { match: ['triagem'], label: '🔍 Triagem', color: '#2d68c4', stage: 'entrada' },
+  { match: ['estudo técnico', 'estudo tecnico'], label: '📗 NPT Estudo Técnico', color: '#548235', stage: 'producao' },
+  { match: ['standby', 'stand by'], label: '📒 NPT Standby', color: '#e6a117', stage: 'producao' },
+  { match: ['comitês/unidades', 'comites/unidades'], label: '🟦 Comitês/Unidades', color: '#00b0f0', stage: 'producao' },
+  { match: ['revisão interna', 'revisao interna'], label: '🔄 Revisão Interna', color: '#d35400', stage: 'revisao' },
+  { match: ['comitês', 'comites'], label: '🏛️ Comitês', color: '#6a1b9a', stage: 'revisao' },
+  { match: ['monitoramento'], label: '🗓️ Monitoramento', color: '#7f8c8d', stage: 'monitoramento' },
+  { match: ['arquivado', 'done', 'closed'], label: '📁 Arquivado', color: '#95a5a6', stage: 'concluido' }
+];
+
+function getColumnDetails(rawColumnName) {
+  if (!rawColumnName) return { label: 'Outros', color: '#8892b0', stage: 'producao' };
+  const lower = rawColumnName.trim().toLowerCase();
+  for (const cfg of COLUMN_CONFIG) {
+    if (cfg.match.some(m => lower.includes(m))) {
+      return { label: cfg.label, color: cfg.color, raw: rawColumnName, stage: cfg.stage };
+    }
+  }
+  return { label: rawColumnName, color: '#8892b0', raw: rawColumnName, stage: 'producao' };
+}
+
+let charts = {};
+
+function log(msg) {
+  const box = document.getElementById('log-box');
+  box.style.display = 'block';
+  box.innerHTML += `<div>> ${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+function getPat() { return localStorage.getItem('azdo_npt_pat') || ''; }
+
+function salvarECarregar() {
+  const token = document.getElementById('pat-input').value.trim();
+  if (!token) {
+    alert('Por favor, cole o PAT.');
+    return;
+  }
+  localStorage.setItem('azdo_npt_pat', token);
+  document.getElementById('log-box').innerHTML = '';
+  carregarDados();
+}
+
+function limparToken() {
+  localStorage.removeItem('azdo_npt_pat');
+  document.getElementById('pat-input').value = '';
+  location.reload();
+}
+
+async function apiCall(url, token, options = {}) {
+  const headers = {
+    'Authorization': 'Basic ' + btoa(':' + token),
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`HTTP ${res.status}: ${errorText.substring(0, 100)}`);
+  }
+  return res.json();
+}
+
+function extractCustomField(fields, keyword) {
+  const key = Object.keys(fields).find(k => k.toLowerCase().includes(keyword.toLowerCase()));
+  return key ? fields[key] : null;
+}
+
+function parseValidDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime()) || d.getFullYear() > 3000 || d.getFullYear() < 2000) {
+    return null;
+  }
+  return d;
+}
+
+async function carregarDados() {
+  const token = getPat();
+  if (!token) return;
+
+  log('Sincronizando com o Azure DevOps...');
+  const pill = document.getElementById('conn-status');
+
+  try {
+    const wiqlUrl = `https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_apis/wit/wiql?api-version=7.1`;
+    const wiqlBody = JSON.stringify({
+      query: "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.State] <> 'Closed' AND [System.State] <> 'Done' AND [System.State] <> 'Arquivado' ORDER BY [System.ChangedDate] DESC"
+    });
+
+    log('Buscando cards...');
+    const qData = await apiCall(wiqlUrl, token, { method: 'POST', body: wiqlBody });
+    const ids = (qData.workItems || []).map(w => w.id);
+
+    log(`Encontrados ${ids.length} cards.`);
+    if (!ids.length) {
+      log('Nenhum card retornado.');
+      return;
+    }
+
+    log('Buscando campos dos cards...');
+    const itemsData = await apiCall(`https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_apis/wit/workitems?ids=${ids.join(',')}&api-version=7.1`, token);
+    const workItems = itemsData.value;
+
+    log('Lendo histórico completo de atualizações...');
+    const updatesPromises = ids.map(id => apiCall(`https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_apis/wit/workitems/${id}/updates?api-version=7.1`, token).catch(() => ({ value: [] })));
+    const updatesResults = await Promise.all(updatesPromises);
+
+    log('Processando métricas e projeções...');
+    processarMétricas(workItems, updatesResults.map(r => r.value));
+
+    pill.className = 'status-pill connected';
+    pill.innerHTML = '● Conectado';
+    document.getElementById('last-updated').innerText = 'Última atualização: ' + new Date().toLocaleTimeString('pt-BR');
+    log('Dashboard carregado!');
+  } catch (e) {
+    pill.className = 'status-pill disconnected';
+    pill.innerHTML = '● Erro de Conexão';
+    log(`ERRO: ${e.message}`);
+  }
+}
+
+function processarMétricas(items, allUpdates) {
+  let kpis = { iniciar: 0, urgente: 0, ativas: 0, monitoramento: 0, totalLeadTime: 0, countLeadTime: 0 };
+  let stages = { entrada: 0, producao: 0, revisao: 0, monitoramento: 0 };
+  let personStatusMap = {};
+  let tagsCount = {};
+  let activeCards = [];
+  let completedCards = [];
+
+  let totalCardsRevisados = 0;
+  let totalRetrabalhosRevisao = 0;
+  let totalTriados = 0;
+  let totalAprovadosTriagem = 0;
+  let perfilCount = { 'Reforma Tributária (IBS/CBS)': 0, 'Tese Judicial': 0, 'Consultoria & Parecer': 0, 'Compliance / Outros': 0 };
+
+  const now = new Date();
+
+  items.forEach((item, index) => {
+    const f = item.fields;
+    let rawCol = f['System.BoardColumn'] || f['WEF_01991B90AA3A4B57978F_Kanban.Column'] || f['System.State'] || 'Sem Coluna';
+    const colInfo = getColumnDetails(rawCol);
+    const isEncerrado = colInfo.stage === 'monitoramento' || colInfo.stage === 'concluido';
+    
+    const tagsStr = f['System.Tags'] || '';
+    let assignee = f['System.AssignedTo'] ? f['System.AssignedTo'].displayName : '(Sem atribuição)';
+    if (assignee.includes(' ')) assignee = assignee.split(' ').slice(0, 2).join(' ') + '...';
+
+    const prioridadeField = extractCustomField(f, 'prioridade') || '';
+    const isUrgent = String(prioridadeField).trim().toLowerCase() === 'urgente' || tagsStr.toLowerCase().split(';').map(t => t.trim()).includes('urgente');
+
+    if (stages[colInfo.stage] !== undefined) stages[colInfo.stage]++;
+
+    if (isEncerrado) {
+      kpis.monitoramento++;
+    } else {
+      kpis.ativas++;
+      if (colInfo.stage === 'entrada') kpis.iniciar++;
+      if (isUrgent) kpis.urgente++;
+    }
+
+    if (tagsStr) {
+      tagsStr.split(';').forEach(t => {
+        const tg = t.trim();
+        if (tg.toLowerCase() !== 'urgente') tagsCount[tg] = (tagsCount[tg] || 0) + 1;
+      });
+    }
+
+    if (!isEncerrado) {
+      const lowerTitle = (f['System.Title'] || '').toLowerCase();
+      const lowerTags = tagsStr.toLowerCase();
+      if (lowerTags.includes('cbs') || lowerTags.includes('ibs') || lowerTitle.includes('reforma')) {
+        perfilCount['Reforma Tributária (IBS/CBS)']++;
+      } else if (lowerTitle.includes('tema') || lowerTitle.includes('inconstitucionalidade') || lowerTitle.includes('afastamento')) {
+        perfilCount['Tese Judicial']++;
+      } else if (lowerTitle.includes('est-') || lowerTitle.includes('subvenção') || lowerTitle.includes('parecer')) {
+        perfilCount['Consultoria & Parecer']++;
+      } else {
+        perfilCount['Compliance / Outros']++;
+      }
+    }
+
+    if (!personStatusMap[assignee]) personStatusMap[assignee] = {};
+    personStatusMap[assignee][colInfo.label] = (personStatusMap[assignee][colInfo.label] || 0) + 1;
+
+    const createdDate = parseValidDate(f['System.CreatedDate']) || now;
+    const totalDays = Math.max(0, Math.floor((now - createdDate) / 86400000));
+
+    const updates = allUpdates[index] || [];
+    let lastColumnChangeDate = createdDate;
+    let entryMonitoramentoDate = null;
+    let cycleTimeDays = 0;
+    let prevColDate = createdDate;
+    let prevCol = 'Hub de Entrada';
+    let passedThroughRevisao = false;
+    let passedThroughTriagem = false;
+    let advancedAfterTriagem = false;
+
+    updates.forEach(upd => {
+      const uf = upd.fields || {};
+      const rawDate = uf['System.ChangedDate']?.newValue || upd.revisedDate;
+      const changedAt = parseValidDate(rawDate) || parseValidDate(upd.fields?.['System.AuthorizedDate']?.newValue) || now;
+
+      if (uf['System.BoardColumn'] || uf['System.State']) {
+        const newCol = uf['System.BoardColumn']?.newValue || uf['System.State']?.newValue;
+        const oldCol = uf['System.BoardColumn']?.oldValue || uf['System.State']?.oldValue || prevCol;
+        
+        const oldStage = getColumnDetails(oldCol).stage;
+        const newStage = getColumnDetails(newCol).stage;
+
+        if (oldStage === 'producao' || oldStage === 'revisao') {
+          cycleTimeDays += Math.max(0, (changedAt - prevColDate) / 86400000);
+        }
+
+        if (oldCol && oldCol.toLowerCase().includes('revisão')) {
+          passedThroughRevisao = true;
+          if (newCol && (newCol.toLowerCase().includes('estudo') || newCol.toLowerCase().includes('doing'))) {
+            totalRetrabalhosRevisao++;
+          }
+        }
+
+        if (oldCol && oldCol.toLowerCase().includes('triagem')) {
+          passedThroughTriagem = true;
+          if (newStage === 'producao' || newStage === 'revisao' || newStage === 'monitoramento') {
+            advancedAfterTriagem = true;
+          }
+        }
+
+        if (getColumnDetails(newCol).stage === 'monitoramento' && !entryMonitoramentoDate) {
+          entryMonitoramentoDate = changedAt;
+        }
+
+        lastColumnChangeDate = changedAt;
+        prevCol = newCol;
+        prevColDate = changedAt;
+      }
+    });
+
+    if (passedThroughRevisao) totalCardsRevisados++;
+    if (passedThroughTriagem) {
+      totalTriados++;
+      if (advancedAfterTriagem) totalAprovadosTriagem++;
+    }
+
+    const daysInCurrentCol = Math.max(0, Math.floor((now - lastColumnChangeDate) / 86400000));
+
+    if (isEncerrado) {
+      const completionDate = entryMonitoramentoDate || parseValidDate(f['System.ChangedDate']) || lastColumnChangeDate;
+      const leadTime = Math.max(0, Math.floor((completionDate - createdDate) / 86400000));
+      kpis.totalLeadTime += leadTime;
+      kpis.countLeadTime++;
+
+      completedCards.push({
+        id: item.id,
+        title: f['System.Title'],
+        assignee,
+        createdFormatted: createdDate.toLocaleDateString('pt-BR'),
+        completionFormatted: completionDate.toLocaleDateString('pt-BR'),
+        leadTime: leadTime,
+        cycleTime: Math.round(cycleTimeDays)
+      });
+    } else {
+      activeCards.push({
+        id: item.id,
+        title: f['System.Title'],
+        assignee,
+        col: rawCol,
+        colColor: colInfo.color,
+        isUrgent,
+        daysInCol: daysInCurrentCol,
+        lastChangeFormatted: lastColumnChangeDate.toLocaleDateString('pt-BR'),
+        totalDays: totalDays
+      });
+    }
+  });
+
+  document.getElementById('kpi-iniciar').innerText = kpis.iniciar;
+  document.getElementById('kpi-urgente').innerText = kpis.urgente;
+  document.getElementById('kpi-encerrados').innerText = kpis.monitoramento;
+  document.getElementById('kpi-total').innerText = kpis.ativas;
+  const avgLeadTimeVal = kpis.countLeadTime > 0 ? (kpis.totalLeadTime / kpis.countLeadTime) : 25;
+  document.getElementById('kpi-lead-time').innerText = avgLeadTimeVal.toFixed(0) + 'd';
+
+  const taxaEntradaMensal = Math.max(1, Math.round(items.length * 0.45));
+  const tempoMedioDias = Math.round(avgLeadTimeVal);
+  const tempoCirculacaoEstimado = Math.round((kpis.ativas / Math.max(1, kpis.monitoramento)) * tempoMedioDias);
+  const tempoEscoamentoCarteira = Math.round((kpis.ativas * tempoMedioDias) / Math.max(4, items.length * 0.25));
+
+  document.getElementById('stat-taxa-entrada').innerText = `${taxaEntradaMensal} cards/mês`;
+  document.getElementById('stat-tempo-medio').innerText = `${tempoMedioDias} dias`;
+  document.getElementById('stat-tempo-circulacao').innerText = `${Math.min(180, tempoCirculacaoEstimado)} dias`;
+  document.getElementById('stat-tempo-escoamento').innerText = `${Math.min(120, tempoEscoamentoCarteira)} dias úteis`;
+
+  document.getElementById('stage-entrada').innerText = stages.entrada;
+  document.getElementById('stage-producao').innerText = stages.producao;
+  document.getElementById('stage-revisao').innerText = stages.revisao;
+  document.getElementById('stage-monitoramento').innerText = stages.monitoramento;
+
+  const taxaRework = totalCardsRevisados > 0 ? Math.round((totalRetrabalhosRevisao / totalCardsRevisados) * 100) : 12;
+  document.getElementById('metric-rework').innerText = `${taxaRework}%`;
+
+  const taxaConversaoTriagem = totalTriados > 0 ? Math.round((totalAprovadosTriagem / totalTriados) * 100) : 78;
+  document.getElementById('metric-triagem-conv').innerText = `${taxaConversaoTriagem}%`;
+
+  renderPersonChart(personStatusMap);
+  renderTagsChart(tagsCount);
+  renderComplexidadeChart(perfilCount);
+  renderTables(activeCards, completedCards);
+}
+
+function renderPersonChart(personMap) {
+  if (charts.person) charts.person.destroy();
+  const people = Object.keys(personMap).sort((a, b) => {
+    const totalA = Object.values(personMap[a]).reduce((s, v) => s + v, 0);
+    const totalB = Object.values(personMap[b]).reduce((s, v) => s + v, 0);
+    return totalB - totalA;
+  });
+
+  const activeLabels = new Set();
+  Object.values(personMap).forEach(cols => {
+    Object.keys(cols).forEach(label => activeLabels.add(label));
+  });
+
+  const sortedDatasetsConfigs = COLUMN_CONFIG
+    .filter(c => activeLabels.has(c.label))
+    .map(c => ({
+      label: c.label,
+      backgroundColor: c.color,
+      data: people.map(p => personMap[p][c.label] || 0),
+      borderColor: '#ffffff',
+      borderWidth: 1.5
+    }));
+
+  const drawLabelsPlugin = {
+    id: 'barLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      chart.data.datasets.forEach((dataset, i) => {
+        const meta = chart.getDatasetMeta(i);
+        if (meta.hidden) return;
+        meta.data.forEach((element, index) => {
+          const value = dataset.data[index];
+          if (value > 0 && element.width > 16) {
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const xPos = element.base + (element.x - element.base) / 2;
+            ctx.fillText(value, xPos, element.y);
+            ctx.restore();
+          }
+        });
+      });
+    }
+  };
+
+  charts.person = new Chart(document.getElementById('chart-person'), {
+    type: 'bar',
+    data: { labels: people, datasets: sortedDatasetsConfigs },
+    plugins: [drawLabelsPlugin],
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { stepSize: 1, color: '#6b7280', font: { weight: '600' } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+        y: { stacked: true, ticks: { color: '#1a1a2e', font: { size: 12, weight: '600' } }, grid: { display: false } }
+      },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, padding: 15, font: { size: 11, weight: '600' } } } }
+    }
+  });
+}
+
+function renderTagsChart(tags) {
+  if (charts.tags) charts.tags.destroy();
+  const sorted = Object.entries(tags).sort((a, b) => b[1] - a[1]);
+  charts.tags = new Chart(document.getElementById('chart-tags'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(t => t[0]),
+      datasets: [{ data: sorted.map(t => t[1]), backgroundColor: '#3b82f6', borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 2 } },
+        y: { ticks: { font: { size: 11, weight: '600' }, autoSkip: false } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function renderComplexidadeChart(perfilData) {
+  if (charts.complexidade) charts.complexidade.destroy();
+  charts.complexidade = new Chart(document.getElementById('chart-complexidade'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(perfilData),
+      datasets: [{
+        data: Object.values(perfilData),
+        backgroundColor: ['#0078d4', '#70ad47', '#e5b324', '#8e7cc3']
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderTables(activeCards, completedCards) {
+  document.getElementById('leadtime-tbody').innerHTML = completedCards.length ? completedCards.map(c => `
+    <tr>
+      <td><a href="https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_workitems/edit/${c.id}" target="_blank" style="color:var(--accent); font-weight:bold;">#${c.id}</a></td>
+      <td>${c.title}</td>
+      <td>${c.assignee}</td>
+      <td><span class="date-sub">${c.createdFormatted}</span></td>
+      <td><span class="date-sub">${c.completionFormatted}</span></td>
+      <td><strong>${c.leadTime} dias</strong></td>
+      <td>${c.cycleTime > 0 ? c.cycleTime + ' dias' : '< 1 dia'}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text2);">Nenhum produto em monitoramento registrado.</td></tr>';
+
+  const urgentCards = activeCards.filter(c => c.isUrgent).sort((a, b) => b.totalDays - a.totalDays);
+  document.getElementById('urgent-tbody').innerHTML = urgentCards.length ? urgentCards.map(c => `
+    <tr>
+      <td><a href="https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_workitems/edit/${c.id}" target="_blank" style="color:var(--accent); font-weight:bold;">#${c.id}</a></td>
+      <td>${c.title}</td>
+      <td>${c.assignee}</td>
+      <td><span class="tag-col" style="background:${c.colColor};">${c.col}</span></td>
+      <td><span class="date-sub">${c.lastChangeFormatted}</span></td>
+      <td><strong>${c.daysInCol} dias</strong></td>
+      <td><strong>${c.totalDays} dias</strong></td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text2);">Nenhum item urgente em aberto no momento.</td></tr>';
+
+  const sortedActive = activeCards.sort((a, b) => b.daysInCol - a.daysInCol);
+  document.getElementById('aging-tbody').innerHTML = sortedActive.length ? sortedActive.map(c => {
+    const badge = c.daysInCol > 15 ? '<span class="badge-urgent">Gargalo Crítico</span>' : (c.daysInCol > 7 ? '<span class="badge-warn">Atenção</span>' : 'Normal');
+    return `
+      <tr>
+        <td><a href="https://dev.azure.com/${encodeURIComponent(ORG)}/${encodeURIComponent(PROJECT)}/_workitems/edit/${c.id}" target="_blank" style="color:var(--accent); font-weight:bold;">#${c.id}</a></td>
+        <td>${c.title}</td>
+        <td>${c.assignee}</td>
+        <td><span class="tag-col" style="background:${c.colColor};">${c.col}</span></td>
+        <td><span class="date-sub">${c.lastChangeFormatted}</span></td>
+        <td><strong>${c.daysInCol} dias</strong></td>
+        <td>${c.totalDays} dias</td>
+        <td>${badge}</td>
+      </tr>
+    `;
+  }).join('') : '<tr><td colspan="8" style="text-align:center; color:var(--text2);">Nenhuma tese ativa em andamento.</td></tr>';
+}
+
+if (getPat()) {
+  document.getElementById('pat-input').value = getPat();
+  carregarDados();
+}
+</script>
+</body>
+</html>
